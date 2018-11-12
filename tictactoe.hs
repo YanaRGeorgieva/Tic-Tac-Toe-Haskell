@@ -139,7 +139,7 @@ genNextMove player board
     | isWon 'O' board = ["Sorry!","O already won the board!"]
     | isWon 'X' board = ["Sorry!","X already won the board!"]
     | initPlayer board == 'N' = ["Not valid table.", "Sorry!", "Try again! :)"]
-    | isEmpty board = (doMoves player board ) !! ( [2,4,6,8] !! (unsafePerformIO (getStdRandom (randomR (0, 3)))))
+    | isEmpty board = (doMoves player board ) !! ( [1,3,5,7] !! (unsafePerformIO (getStdRandom (randomR (0, 3)))))
     | otherwise = fst (maximumBy (comparing snd)  (sortBy (flip (comparing (isBlocked . fst))) [(game, getMax (mapTree (generate game (other player)) (other player) 0)) | game <- doMoves player board]))
 
 -- We see which players turn it is.
