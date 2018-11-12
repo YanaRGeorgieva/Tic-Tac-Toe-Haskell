@@ -1,17 +1,17 @@
 -- Yana Georgieva, ComputerScience, 2 course, 1 stream, group 3, FN: 81281
 
 -- Using zipWith, concatMap and other functions from this library.
-import Data.List
+import           Data.List
 -- Found a very nifty way to change an element in matrix using some fuctions from here.
-import Control.Lens
+import           Control.Lens
 -- Using comparing.
-import Data.Ord
+import           Data.Ord
 -- Using random generator of Ints in an interval getStdRandom, randomR.
-import System.Random
+import           System.Random
 -- To convert an IO Int into a "normal" Int.
-import System.IO.Unsafe
+import           System.IO.Unsafe
 -- For the IO operations in main.
-import System.IO
+import           System.IO
 
 -- The game tree structure.
 data Tree a = Nil | Node a [Tree a] deriving (Show,Eq)
@@ -21,12 +21,12 @@ type Board = [String]
 
 -- The first parameter is the number of the row and the secons is the column number.
 type Position = (Int,Int)
--- Finding the diagonal of the board. 
+-- Finding the diagonal of the board.
 -- The parameter "x" is the board.
 diag :: [[a]] -> [a]
 diag x = zipWith (!!) x [0..]
 
--- Finding the second diagonal of the board. 
+-- Finding the second diagonal of the board.
 -- The parameter "x" is the board.
 secDiag ::[[a]] -> [a]
 secDiag x = zipWith (!!) x [2, 1, 0]
@@ -39,7 +39,7 @@ isEmpty b = concat b == filter (== '_') (concat b)
 isFull :: Board -> Bool
 isFull b = concat b == filter (/= '_') (concat b)
 
--- We generate all the empty positions. We return a list of them. 
+-- We generate all the empty positions. We return a list of them.
 emptySpace :: Board -> [Position]
 emptySpace board = [(x, y) | x <- [0 .. 2], y <- [0 .. 2], ((board !! x) !! y) == '_']
 
@@ -47,20 +47,20 @@ emptySpace board = [(x, y) | x <- [0 .. 2], y <- [0 .. 2], ((board !! x) !! y) =
 isWon :: Char -> [String] -> Bool
 isWon pl board = elem win board || elem win (transpose board)
                         || diag board == win || secDiag board == win
-                            where 
+                            where
                                 win = replicate 3 pl
 
 -- We check if we can block an opponent move. We use it to sort the boards when all of the scores are equal.
 -- It will become clearer  when we go to the genNextMove function.
--- The idea if that some moves may have equal scores, but we don't want to return the first random board. 
+-- The idea if that some moves may have equal scores, but we don't want to return the first random board.
 -- That is why this ordering helps us to return a "smater" move, not the first random.
 -- With it:
 -- X X
---  O 
+--  O
 --  OX
 -- We will return for sure
 -- XOX
---  O 
+--  O
 --  OX
 -- or
 -- X X
@@ -68,16 +68,16 @@ isWon pl board = elem win board || elem win (transpose board)
 --  OX
 -- Without it there is a chance we might return
 -- X X
--- OO 
+-- OO
 --  OX
 -- or
 -- X X
---  O 
+--  O
 -- OOX
 isBlocked :: Board -> Int
 isBlocked board = length (intersect win board) + length (intersect win (transpose board))
                         + (if elem (diag board) win then 1 else 0) + (if elem (secDiag board) win then 1 else 0)
-                            where 
+                            where
                                 win = permutations [pl, pl, other pl]
                                 pl =  other (initPlayer board)
 
@@ -89,21 +89,21 @@ other pl = if pl == 'X' then 'O' else 'X'
 -- If a winning board(s) is(are) generated then the generated along them do not pose any interest to us.
 doMoves :: Char -> Board -> [Board]
 doMoves player board =if null check then moves else check
-    where 
+    where
         moves = [board & element (fst position) . element (snd position) .~ player| position <- emptySpace board]
         check = filter (\ b -> isWon player b || isWon (other player) b) moves
 
 -- Generating the game tree.
 -- The leaves are the won boards and the full boards which have come to a draw.
 generate :: Board -> Char -> Tree Board
-generate board player 
+generate board player
     |isWon player board || isWon (other player) board  = Node board [Nil]
     | null (doMoves player board) =  Node board [Nil]
     |otherwise = Node board (map (\x-> generate x (other player)) (doMoves player board))
 
 -- For the minimax algorithm given a current game board, a player and the depth of the recursion on the current step of the scan of the already generated game tree.
 makeScore :: Char -> Board -> Int -> Int
-makeScore  player board depth 
+makeScore  player board depth
     | isWon player board = 10 - depth -- If the current player wins we give a positive score.
     | isWon (other player) board = depth - 10 -- If the opponent player wins we give a negative score.
     | otherwise = 0 -- If it is a draw we give a 0.
@@ -112,7 +112,7 @@ makeScore  player board depth
 -- Here the parameters are the game tree, the first player and the depth of the recursive scan.
 -- We keep   track of the recursive scan so we can give a more realistic score.
 mapTree :: Tree Board -> Char -> Int -> Tree Int
-mapTree Nil _ _ = Nil 
+mapTree Nil _ _ = Nil
 mapTree (Node board []) player depth =  Node (makeScore player board depth) []
 mapTree (Node board (x1:y:xs)) player depth = Node (makeScore player board depth) (map (\ x -> mapTree x (other player) (depth + 1)) (x1:y:xs))
 mapTree (Node board [boards]) player depth = Node (makeScore player board depth) (map (\ x -> mapTree x (other player) (depth + 1)) [boards])
@@ -121,7 +121,7 @@ mapTree (Node board [boards]) player depth = Node (makeScore player board depth)
 getLeaves :: Eq a => Tree a -> [a]
 getLeaves Nil      = []
 getLeaves (Node curr []) = [curr]
-getLeaves (Node curr children) = if all ( == Nil) children 
+getLeaves (Node curr children) = if all ( == Nil) children
                                 then [curr]
                                 else concatMap getLeaves children
 
@@ -134,23 +134,23 @@ getMax inttree = maximum (getLeaves inttree)
 -- If the board is empty we generate the next board with the X put at the 4 random corners of the old empty one.
 -- Otherwise we take the board with the best score generated by minimax algorithm  and the best blocking score.
 genNextMove :: Char -> Board -> Board
-genNextMove player board 
+genNextMove player board
     | isFull board = ["Sorry!","Full board!"]
     | isWon 'O' board = ["Sorry!","O already won the board!"]
     | isWon 'X' board = ["Sorry!","X already won the board!"]
     | initPlayer board == 'N' = ["Not valid table.", "Sorry!", "Try again! :)"]
-    | isEmpty board = (doMoves player board ) !! ( [0,2,6,8] !! (unsafePerformIO (getStdRandom (randomR (0, 3))))) 
+    | isEmpty board = (doMoves player board ) !! ( [2,4,6,8] !! (unsafePerformIO (getStdRandom (randomR (0, 3)))))
     | otherwise = fst (maximumBy (comparing snd)  (sortBy (flip (comparing (isBlocked . fst))) [(game, getMax (mapTree (generate game (other player)) (other player) 0)) | game <- doMoves player board]))
 
--- We see which players turn it is. 
+-- We see which players turn it is.
 -- If the board is invalid we return a 'N' which is an error message.
 -- X always starts first.
 initPlayer :: Board -> Char
-initPlayer board 
+initPlayer board
     | count board 'X' == count board 'O' = 'X'
     | count board 'X' - count board 'O' == 1 = 'O'
     | otherwise = 'N'
-    where 
+    where
         count::[String] -> Char -> Int
         count str ch = length (filter (== ch) (concat str))
 
@@ -162,11 +162,11 @@ generateMove board = genNextMove (initPlayer board) board
 makePresentable :: Board -> String
 makePresentable = unlines
 
-main :: IO() 
+main :: IO()
 main = do
     hSetBuffering stdout NoBuffering
     putStr "Enter a board please: \n"
-    line1 <- getLine 
+    line1 <- getLine
     line2 <- getLine
     line3 <- getLine
     putStrLn ("result:\n" ++ makePresentable(generateMove [line1,line2,line3]))
